@@ -112,6 +112,7 @@ export const AnnotatorSelectorDropdown: React.FC<AnnotatorSelectorProps> = ({
             <option value="Phantom65536">Phantom65536</option>
             <option value="wingspecialist">wingspecialist</option>
             <option value="ethanc">ethanc</option>
+            <option value="york">york</option>
           </select>
         </div>
       )}

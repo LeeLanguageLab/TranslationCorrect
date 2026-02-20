@@ -10,6 +10,7 @@ interface QAComparisonContainerProps {
   username: string;
   machineTranslation: string;
   onAgreedSpansChange?: (spans: Span[]) => void;
+  activeLanguage: string;
 }
 
 // Custom HighlightedText component for QA comparison with span selection and tooltip
@@ -110,11 +111,14 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
   username,
   machineTranslation,
   onAgreedSpansChange,
+  activeLanguage,
 }) => {
   const [annotationSpans, setAnnotationSpans] = useState<Span[]>([]);
   const [qaSpans, setQASpans] = useState<Span[]>([]);
   const [sharedSpans, setSharedSpans] = useState<Span[]>([]);
   const [hasQAForAnnotator, setHasQAForAnnotator] = useState<boolean>(false);
+  const [qaUsers, setQaUsers] = useState<string[]>([]);
+  const [selectedQaUser, setSelectedQaUser] = useState<string>(username);
   const [annotatorCorrectedSentence, setAnnotatorCorrectedSentence] = useState<string>(machineTranslation);
   const [qaCorrectedSentence, setQACorrectedSentence] = useState<string>(machineTranslation);
   const [sharedSpansSentence, setSharedSpansSentence] = useState<string>(machineTranslation);
@@ -149,6 +153,8 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
       setQASpans([]);
       setSharedSpans([]);
       setHasQAForAnnotator(false);
+      setQaUsers([]);
+      setSelectedQaUser(username);
       setAnnotatorCorrectedSentence(machineTranslation);
       setQACorrectedSentence(machineTranslation);
       setSharedSpansSentence(machineTranslation);
@@ -157,6 +163,33 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
       setHoveredHighlight(null);
       setTooltipPosition(null);
       return;
+    }
+
+    // Define fixed QA user lists based on language
+    let fixedQaUsers: string[] = [];
+    if (activeLanguage === "Cantonese") {
+      fixedQaUsers = ["Phantom65536", "wingspecialist", "york"];
+    } else if (activeLanguage === "Mandarin") {
+      // Get dynamic list for Mandarin
+      fixedQaUsers = Object.keys(currentSentence.annotations || {})
+        .filter((key) => key.endsWith("_qa"))
+        .map((key) => key.replace("_qa", ""))
+        .filter((qaUser) => {
+          const qaEntry = currentSentence.annotations?.[`${qaUser}_qa`];
+          return qaEntry?.annotator === annotator;
+        });
+    }
+
+    setQaUsers(fixedQaUsers);
+
+    const defaultQaUser = fixedQaUsers.includes(selectedQaUser)
+      ? selectedQaUser
+      : fixedQaUsers.includes(username)
+      ? username
+      : fixedQaUsers[0] || "";
+
+    if (defaultQaUser !== selectedQaUser) {
+      setSelectedQaUser(defaultQaUser);
     }
 
     // Get annotator spans
@@ -178,7 +211,7 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
     setOriginalAnnotationSpans(copySpanArr(annotatorSpans));
 
     // Get QA user spans
-    const qaKey = `${username}_qa`;
+    const qaKey = selectedQaUser ? `${selectedQaUser}_qa` : "";
     const qaAnnotation = currentSentence.annotations?.[qaKey];
     
     // Check if the QA was done for the current annotator
@@ -220,7 +253,7 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
     setMoveButtonPosition(null);
     setHoveredHighlight(null);
     setTooltipPosition(null);
-  }, [sentenceData, sentenceID, annotator, username, machineTranslation]);
+  }, [sentenceData, sentenceID, annotator, username, machineTranslation, selectedQaUser, activeLanguage]);
 
   useEffect(() => {
     loadComparisonData();
@@ -365,6 +398,26 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
 
   return (
     <div className="qa-comparison-container">
+      <div className="qa-user-selector">
+        <label htmlFor="qa_user_dropdown">QA user</label>
+        <select
+          name="qa-user-dropdown"
+          id="qa_user_dropdown"
+          value={selectedQaUser}
+          onChange={(e) => setSelectedQaUser(e.target.value)}
+          disabled={qaUsers.length === 0}
+        >
+          {qaUsers.length === 0 ? (
+            <option value="">No QA users</option>
+          ) : (
+            qaUsers.map((qaUser) => (
+              <option key={qaUser} value={qaUser}>
+                {qaUser}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
       {/* Annotator Spans Box */}
       <div className="qa-comparison-box annotator-spans-box">
         <div className="qa-comparison-header">
@@ -394,7 +447,7 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
       {/* QA Spans Box */}
       <div className="qa-comparison-box qa-spans-box">
         <div className="qa-comparison-header">
-          <h3>QA Spans ({username})</h3>
+          <h3>QA Spans ({selectedQaUser || "N/A"})</h3>
           <span className="span-count">{qaSpans.length} spans</span>
         </div>
         <div className="qa-comparison-content">
@@ -416,7 +469,7 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
               />
             ) : (
               <p className="no-qa-message">
-                {username} has not QA'd {annotator}'s annotations for this sentence.
+                {selectedQaUser || "This user"} has not QA'd {annotator}'s annotations for this sentence.
               </p>
             )}
           </div>
@@ -444,7 +497,7 @@ const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
               />
             ) : (
               <p className="no-qa-message">
-                No agreed upon spans - {username} has not QA'd {annotator}'s annotations.
+                No agreed upon spans - {selectedQaUser || "this user"} has not QA'd {annotator}'s annotations.
               </p>
             )}
           </div>
