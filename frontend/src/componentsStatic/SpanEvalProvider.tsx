@@ -84,7 +84,7 @@ export const SpanEvalProvider = ({ children }: SpanEvalProviderProps) => {
 
   const [error_type, setError_type] = useState<string>("");
 
-  const [spanSeverity, setSpanSeverity] = useState<string>("");
+  const [spanSeverity, setSpanSeverity] = useState<string>("Minor");
 
   const setEntryIdx = (newEntryIdx: number) => {
     if (newEntryIdx >= input.length) {

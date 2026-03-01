@@ -95,7 +95,7 @@ export const PostEditContainer: React.FC<PostEditContainerProps> = ({
   const lastEmittedText = useRef<string | null>(null); // Track last text emitted to parent to prevent echo loops
   const lastEmittedSpans = useRef<HighlightedError[] | null>(null); // Track last spans emitted to parent
   const updateTimeoutRef = useRef<number | null>(null); // Debounce timeout for span updates
-  const { addNewErrorSpan, deleteErrorSpan, clearErrorSpans, errorSpans, setErrorSpans, updateSpanErrorType, updateSpanSeverity, setSpanSeverity } = useSpanEvalContext();
+  const { addNewErrorSpan, deleteErrorSpan, clearErrorSpans, errorSpans, setErrorSpans, updateSpanErrorType, updateSpanSeverity, spanSeverity, setSpanSeverity } = useSpanEvalContext();
   
   // Local optimistic state for spans to ensure synchronous updates with text editing
   const [internalSpans, setInternalSpans] = useState<HighlightedError[]>(errorSpans || []);
@@ -282,12 +282,14 @@ export const PostEditContainer: React.FC<PostEditContainerProps> = ({
       end,
       length: end - start,
     });
+    // Use selected severity from dropdown, default to "Minor" if not set
+    const severityToUse = spanSeverity || "Minor";
     addNewErrorSpan(
       original_text,
       start,
       end,
       "Addition",
-      "Minor"
+      severityToUse
     );
   };
 
@@ -443,7 +445,14 @@ export const PostEditContainer: React.FC<PostEditContainerProps> = ({
       setSelectedSpan(highlight.error_type);
       setHoveredHighlight(highlight);
       setSelectedHighlightIdx(highlightIdx);
-      setSpanSeverity(highlight.error_severity);
+      
+      // If user has selected a severity in dropdown, apply it to the span
+      if (spanSeverity && spanSeverity !== highlight.error_severity) {
+        updateSpanSeverity(highlightIdx, spanSeverity);
+      } else {
+        // Otherwise, just show the span's current severity in dropdown
+        setSpanSeverity(highlight.error_severity);
+      }
 
       const rect = e.currentTarget.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -465,7 +474,10 @@ export const PostEditContainer: React.FC<PostEditContainerProps> = ({
       }, 250);
     } else {
       setSelectedSpan(highlight.error_type);
-      setSpanSeverity(highlight.error_severity);
+      // Show span's current severity, but don't overwrite if user has a selection
+      if (!spanSeverity) {
+        setSpanSeverity(highlight.error_severity);
+      }
       setSpanDropdown(true);
       setSelectedHighlightIdx(highlightIdx);
 
