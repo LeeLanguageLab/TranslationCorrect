@@ -13,14 +13,8 @@ import { AnnotatorSelectorDropdown } from "./scoring/AnnotatorSelector";
 import QAComparisonContainer from "./qa/QAComparisonContainer";
 import { Span } from "../util/qaComparisonUtils";
 import logo from "../assets/logo.svg";
-
-// Type Definitions
-type DatasetType = {
-  mandarin_dataset: any[];
-  cantonese_dataset: any[];
-  shanghainese_dataset: any[];
-  cantonese_pivot_dataset: any[];
-};
+import { useAnnotationApp } from "../context/AnnotationAppContext";
+import { useTextAnnotation } from "../context/TextAnnotationContext";
 
 const App: React.FC = () => {
   const {
@@ -41,47 +35,30 @@ const App: React.FC = () => {
     setSpanScores,
   } = useSpanEvalContext();
 
-  // Drill baby drill
-  const [username, setUsername] = useState<string | null>("");
-  const [annotator, setAnnotator] = useState<string | null>("");
-  const [sentenceID, setSentenceID] = useState<string | null>("undefined_id");
-  const [currentDatabase, setCurrentDatabase] = useState<string | null>("");
-  const [activeLanguage, setActiveLanguage] = useState("Mandarin");
+  // Application-level state from context
+  const {
+    username, setUsername,
+    annotator, setAnnotator,
+    sentenceID, setSentenceID,
+    currentDatabase,
+    currentMode,
+    forceScroll, setForceScroll,
+    dataset,
+    sentenceData, setSentenceData,
+  } = useAnnotationApp();
 
-  const [currentMode, setCurrentMode] = useState<"Annotation Mode" | "QA Mode" | "QA Comparison">("Annotation Mode");
-  const [forceScroll, setForceScroll] = useState(false);
-  // Dataset
-  const [dataset, setDataset] = useState<DatasetType | null>(null);
-
-  const [sentenceData, setSentenceData] = useState<
-    {
-      _id: string;
-      id: number;
-      src: string;
-      mt: string;
-      ref: string;
-      annotations: Object;
-    }[]
-  >([]);
-
-  const [modifiedText, setModifiedText] =
-    React.useState<string>(machineTranslation);
-  const [addedErrorSpans, setAddedErrorSpans] = React.useState<
-    HighlightedError[]
-  >([]);
-  const [overallScore, setOverallScore] = React.useState<number>(50);
-  
-  // State for QA Comparison agreed spans
-  const [agreedSpans, setAgreedSpans] = useState<Span[]>([]);
+  // Text/annotation state from context
+  const {
+    modifiedText, setModifiedText,
+    addedErrorSpans, setAddedErrorSpans,
+    overallScore, setOverallScore,
+    agreedSpans, setAgreedSpans,
+  } = useTextAnnotation();
 
   // console.log(curEntryIdx);
 
   // const [diffContent, setDiffContent] =
   //   useState<React.ReactNode>(machineTranslation);
-
-  const handleDiffTextUpdate = (parsedDiff: React.ReactNode) => {
-    setDiffContent(parsedDiff);
-  };
 
   const handleGoToLastAnnotation = () => {
     // Use different annotation keys based on mode
@@ -408,45 +385,10 @@ const App: React.FC = () => {
       <div className="annotate-container">
         {username ? (
           <div className="annotate-container-annotate">
-            <DatabaseSentenceView
-              setOrigText={setOrigText}
-              setTranslatedText={setTranslatedText}
-              setDiffContent={setDiffContent}
-              setModifedText={setModifiedText}
-              setAddedErrorSpans={setAddedErrorSpans}
-              setHighlightedError={setErrorSpans}
-              username={username}
-              annotator={annotator}
-              setAnnotator={setAnnotator}
-              sentenceID={sentenceID}
-              setSentenceID={setSentenceID}
-              setCurrentDatabase={setCurrentDatabase}
-              sentenceData={sentenceData}
-              setSentenceData={setSentenceData}
-              dataset={dataset}
-              setDataset={setDataset}
-              activeLanguage={activeLanguage}
-              setActiveLanguage={setActiveLanguage}
-              forceScroll={forceScroll}
-              setForceScroll={setForceScroll}
-              currentMode={currentMode}
-              setCurrentMode={setCurrentMode}
-            />
+            <DatabaseSentenceView />
             <div className='annotator-selector'>
               {(currentMode === "QA Mode" || currentMode === "QA Comparison") && (
-                <AnnotatorSelectorDropdown
-                  username={username}
-                  annotator={annotator}
-                  setAnnotator={setAnnotator}
-                  sentenceData={sentenceData}
-                  sentenceID={sentenceID}
-                  setDiffContent={setDiffContent}
-                  setModifedText={setModifiedText}
-                  setAddedErrorSpans={setAddedErrorSpans}
-                  setHighlightedError={setErrorSpans}
-                  generateDiff={generateDiff}
-                  activeLanguage={activeLanguage}
-                />
+                <AnnotatorSelectorDropdown />
               )}
             </div>
             <div className="go-to-last-annotated-button-container">
@@ -494,32 +436,12 @@ const App: React.FC = () => {
 
             {/* Post Edit Section - hide if QA Comparison mode */}
             {currentMode !== "QA Comparison" && (
-              <PostEditContainer
-              machineTranslation={machineTranslation}
-              setMachineTranslation={setTranslatedText}
-              // highlightedError={highlightedError!}
-              // setHighlightedError={setErrorSpans}
-              onDiffTextUpdate={handleDiffTextUpdate}
-              modifiedText={modifiedText}
-              setModifiedText={setModifiedText}
-              // addedErrorSpans={addedErrorSpans}
-              // setAddedErrorSpans={setAddedErrorSpans}
-              diffContent={diffContent}
-              setDiffContent={setDiffContent}
-              currentMode={currentMode}
-              />
+              <PostEditContainer />
             )}
 
             {/* QA Comparison Section - only show in QA Comparison mode */}
             {currentMode === "QA Comparison" && (
-              <QAComparisonContainer 
-                sentenceData={sentenceData} 
-                sentenceID={sentenceID} 
-                annotator={annotator} 
-                username={username} 
-                machineTranslation={machineTranslation}
-                onAgreedSpansChange={setAgreedSpans}
-              />
+              <QAComparisonContainer />
             )}
 
             {/* Translation Submission Section */}
@@ -532,12 +454,7 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="annotate-container-login">
-            <LoginForm
-              setDataset={setDataset}
-              setSentenceData={setSentenceData}
-              setDBUsername={setUsername}
-              setAnnotator={setAnnotator}
-            ></LoginForm>
+            <LoginForm />
           </div>
         )}
 

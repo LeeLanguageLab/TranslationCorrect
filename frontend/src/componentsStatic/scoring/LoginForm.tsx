@@ -1,30 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import { useAnnotationApp } from "../../context/AnnotationAppContext";
 
-type LoginFormProps = {
-  setDataset: React.Dispatch<any>;
-  setSentenceData: React.Dispatch<
-    React.SetStateAction<
-      {
-        _id: string;
-        id: number;
-        src: string;
-        mt: string;
-        ref: string;
-        annotations: Object;
-      }[]
-    >
-  >;
-  setDBUsername: React.Dispatch<React.SetStateAction<string>>;
-  setAnnotator: React.Dispatch<React.SetStateAction<string>>;
-};
+export const LoginForm: React.FC = () => {
+  const {
+    setDataset,
+    setSentenceData,
+    setUsername: setDBUsername,
+    setAnnotator,
+  } = useAnnotationApp();
 
-export const LoginForm: React.FC<LoginFormProps> = ({
-  setDataset,
-  setSentenceData,
-  setDBUsername,
-  setAnnotator,
-}) => {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [isNewUser, setIsNewUser] = useState<boolean>(false);

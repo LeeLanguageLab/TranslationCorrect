@@ -5,6 +5,9 @@ import checkmark from "../../assets/checkmark.svg";
 import cross from "../../assets/x_cross.svg";
 import { generateDiff } from "../postEdit/PostEditContainer"
 import { getSpanDiffs } from "../../util/qaComparisonUtils";
+import { useAnnotationApp } from "../../context/AnnotationAppContext";
+import { useTextAnnotation } from "../../context/TextAnnotationContext";
+import { useSpanEvalContext } from "../SpanEvalProvider";
 
 /**
  * 📝 How to assign sentences to annotators:
@@ -42,63 +45,38 @@ const assignedMandarin: AssignedIndexes = {};
 const assignedCantonese: AssignedIndexes = {};
 const assignedShanghainese: AssignedIndexes = {};
 
-// Type Definitions
-type DatasetType = {
-  mandarin_dataset: any[];
-  cantonese_dataset: any[];
-  shanghainese_dataset: any[];
-  cantonese_pivot_dataset: any[];
-};
+export const DatabaseSentenceView: React.FC = () => {
+  const {
+    username,
+    annotator,
+    setAnnotator,
+    sentenceID,
+    setSentenceID,
+    setCurrentDatabase,
+    sentenceData,
+    setSentenceData,
+    dataset,
+    setDataset,
+    activeLanguage,
+    setActiveLanguage,
+    forceScroll,
+    setForceScroll,
+    currentMode,
+    setCurrentMode,
+  } = useAnnotationApp();
 
-type DatabaseSentenceViewProps = {
-  setOrigText: React.Dispatch<React.SetStateAction<string>>;
-  setTranslatedText: React.Dispatch<React.SetStateAction<string>>;
-  setDiffContent: React.Dispatch<React.SetStateAction<React.ReactNode>>;
-  setModifedText: React.Dispatch<React.SetStateAction<string>>;
-  username: string;
-  annotator: string;
-  setAnnotator: React.Dispatch<React.SetStateAction<string>>;
-  sentenceID: string;
-  setSentenceID: React.Dispatch<React.SetStateAction<string>>;
-  setCurrentDatabase: React.Dispatch<React.SetStateAction<string>>;
-  setAddedErrorSpans: React.Dispatch<React.SetStateAction<any[]>>;
-  setHighlightedError: React.Dispatch<React.SetStateAction<any[]>>;
-  sentenceData: any[];
-  setSentenceData: React.Dispatch<any>;
-  setDataset: React.Dispatch<React.SetStateAction<DatasetType | null>>;
-  dataset: DatasetType | null;
-  currentMode: "Annotation Mode" | "QA Mode" | "QA Comparison";
-  setCurrentMode: React.Dispatch<React.SetStateAction<"Annotation Mode" | "QA Mode" | "QA Comparison">>;
-  activeLanguage: string;
-  setActiveLanguage: React.Dispatch<React.SetStateAction<string>>;
-  forceScroll: boolean;
-  setForceScroll: React.Dispatch<React.SetStateAction<boolean>>;
-};
+  const {
+    setModifiedText: setModifedText,
+    setAddedErrorSpans,
+  } = useTextAnnotation();
 
-export const DatabaseSentenceView: React.FC<DatabaseSentenceViewProps> = ({
-  setOrigText,
-  setTranslatedText,
-  setDiffContent,
-  setModifedText,
-  username,
-  annotator,
-  setAnnotator,
-  sentenceID,
-  setSentenceID,
-  setCurrentDatabase,
-  setAddedErrorSpans,
-  setHighlightedError,
-  sentenceData,
-  setSentenceData,
-  setDataset,
-  dataset,
-  currentMode,
-  setCurrentMode,
-  activeLanguage,
-  setActiveLanguage,
-  forceScroll,
-  setForceScroll
-}) => {
+  const {
+    setOrigText,
+    setTranslatedText,
+    setDiffContent,
+    setErrorSpans: setHighlightedError,
+  } = useSpanEvalContext();
+
   const [row_active, setRow_active] = useState<boolean>(false);
 
   const mandarin_annotators = ["Hannah", "RuntongLiang", "qianshi2"];

@@ -12,6 +12,8 @@ import { BaseEditor, createEditor, Descendant, Editor, Node as SlateNode, Range,
 import { Slate, Editable, ReactEditor, RenderLeafProps, withReact } from "slate-react";
 import { HistoryEditor, withHistory } from "slate-history";
 import { HighlightedError, colorMappings } from "../../types";
+import { useTextAnnotation } from "../../context/TextAnnotationContext";
+import { useAnnotationApp } from "../../context/AnnotationAppContext";
 
 type CustomText = {
   text: string;
@@ -32,17 +34,6 @@ declare module "slate" {
     Text: CustomText;
   }
 }
-
-type PostEditContainerProps = {
-  currentMode?: "Annotation Mode" | "QA Mode" | "QA Comparison";
-  machineTranslation: string;
-  setMachineTranslation: (newTranslation: string) => void;
-  onDiffTextUpdate: (newDiffText: React.ReactNode) => void;
-  modifiedText: string;
-  setModifiedText: (newText: string) => void;
-  diffContent: React.ReactNode;
-  setDiffContent: (newDiffContent: React.ReactNode) => void;
-};
 
 // Originally inside component, extracted it out
 export const generateDiff = (original: string, modified: string, setModifiedText: (newText: string) => void, setDiffContent: (newDiffContent: React.ReactNode) => void) => {
@@ -81,21 +72,17 @@ export const generateDiff = (original: string, modified: string, setModifiedText
 };
 
 // **PostEditContainer Component**
-export const PostEditContainer: React.FC<PostEditContainerProps> = ({
-  machineTranslation,
-  onDiffTextUpdate,
-  modifiedText,
-  setModifiedText,
-  setDiffContent,
-  currentMode,
-}) => {
+export const PostEditContainer: React.FC = () => {
+  const { translatedText: machineTranslation, setTranslatedText: setMachineTranslation, diffContent, setDiffContent, addNewErrorSpan, deleteErrorSpan, clearErrorSpans, errorSpans, setErrorSpans, updateSpanErrorType, updateSpanSeverity, spanSeverity, setSpanSeverity } = useSpanEvalContext();
+  const { modifiedText, setModifiedText } = useTextAnnotation();
+  const { currentMode } = useAnnotationApp();
+
   const editor = useMemo(() => withHistory(withReact(createEditor() as ReactEditor)), []);
   const editableDivRef = useRef<HTMLDivElement>(null);
   const isInternalEditRef = useRef(false); // Track if current change is from user edit
   const lastEmittedText = useRef<string | null>(null); // Track last text emitted to parent to prevent echo loops
   const lastEmittedSpans = useRef<HighlightedError[] | null>(null); // Track last spans emitted to parent
   const updateTimeoutRef = useRef<number | null>(null); // Debounce timeout for span updates
-  const { addNewErrorSpan, deleteErrorSpan, clearErrorSpans, errorSpans, setErrorSpans, updateSpanErrorType, updateSpanSeverity, spanSeverity, setSpanSeverity } = useSpanEvalContext();
   
   // Local optimistic state for spans to ensure synchronous updates with text editing
   const [internalSpans, setInternalSpans] = useState<HighlightedError[]>(errorSpans || []);
@@ -234,12 +221,12 @@ export const PostEditContainer: React.FC<PostEditContainerProps> = ({
       lastEmittedSpans.current = updatedSpans;
       // generateDiff calls setModifiedText internally, but we've already updated the spans and text state.
       // We call it here to generate the visual diff elements for the UI.
-      generateDiff(machineTranslation, newText, () => {}, onDiffTextUpdate);
+      generateDiff(machineTranslation, newText, () => {}, setDiffContent);
     },
     [
       editor, // changes in editor ref are rare but operation access needs it
       machineTranslation,
-      onDiffTextUpdate,
+      setDiffContent,
       setErrorSpans,
       setModifiedText, 
     ]

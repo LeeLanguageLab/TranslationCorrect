@@ -2,15 +2,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { copySpanArr, adjustMovingSpanIndices, getSharedSpansSentence, getSpanDiffs, Span } from "../../util/qaComparisonUtils";
 import { HighlightedError, colorMappings } from "../../types";
 import "../../index.css";
-
-interface QAComparisonContainerProps {
-  sentenceData: any[];
-  sentenceID: string;
-  annotator: string;
-  username: string;
-  machineTranslation: string;
-  onAgreedSpansChange?: (spans: Span[]) => void;
-}
+import { useAnnotationApp } from "../../context/AnnotationAppContext";
+import { useTextAnnotation } from "../../context/TextAnnotationContext";
+import { useSpanEvalContext } from "../SpanEvalProvider";
 
 // Custom HighlightedText component for QA comparison with span selection and tooltip
 interface QAHighlightedTextProps {
@@ -103,14 +97,17 @@ const QAHighlightedText: React.FC<QAHighlightedTextProps> = ({
   );
 };
 
-const QAComparisonContainer: React.FC<QAComparisonContainerProps> = ({
-  sentenceData,
-  sentenceID,
-  annotator,
-  username,
-  machineTranslation,
-  onAgreedSpansChange,
-}) => {
+const QAComparisonContainer: React.FC = () => {
+  const {
+    sentenceData,
+    sentenceID,
+    annotator,
+    username,
+  } = useAnnotationApp();
+
+  const { setAgreedSpans: onAgreedSpansChange } = useTextAnnotation();
+  const { translatedText: machineTranslation } = useSpanEvalContext();
+
   const [annotationSpans, setAnnotationSpans] = useState<Span[]>([]);
   const [qaSpans, setQASpans] = useState<Span[]>([]);
   const [sharedSpans, setSharedSpans] = useState<Span[]>([]);

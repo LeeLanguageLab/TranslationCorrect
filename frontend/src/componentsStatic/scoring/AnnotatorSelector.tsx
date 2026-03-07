@@ -1,39 +1,30 @@
 import React, { useState } from "react";
 import "../../index.css";
+import { useAnnotationApp } from "../../context/AnnotationAppContext";
+import { useTextAnnotation } from "../../context/TextAnnotationContext";
+import { useSpanEvalContext } from "../SpanEvalProvider";
+import { generateDiff } from "../postEdit/PostEditContainer";
 
-type AnnotatorSelectorProps = {
-  username: string;
-  annotator: string;
-  setAnnotator: React.Dispatch<React.SetStateAction<string>>;
-  sentenceData: any;
-  sentenceID: string;
-  setDiffContent: React.Dispatch<React.SetStateAction<React.ReactNode>>;
-  setModifedText: React.Dispatch<React.SetStateAction<string>>;
-  setAddedErrorSpans: React.Dispatch<React.SetStateAction<any[]>>;
-  setHighlightedError: React.Dispatch<React.SetStateAction<any[]>>;
-  generateDiff: (
-    original: string, 
-    modified: string, 
-    setModifiedText: (newText: string) => void, 
-    setDiffContent: (newDiffContent: React.ReactNode) => void
-  ) => void;
-  activeLanguage: string;
-};
+// **AnnotatorSelectorDropdown Component**
+export const AnnotatorSelectorDropdown: React.FC = () => {
+  const {
+    username,
+    annotator,
+    setAnnotator,
+    sentenceData,
+    sentenceID,
+    activeLanguage,
+  } = useAnnotationApp();
 
-// **ScoringContainer Component**
-export const AnnotatorSelectorDropdown: React.FC<AnnotatorSelectorProps> = ({
-  username,
-  annotator,
-  setAnnotator,
-  sentenceData,
-  sentenceID,
-  setDiffContent,
-  setModifedText,
-  setAddedErrorSpans,
-  setHighlightedError,
-  generateDiff,
-  activeLanguage,
-}) => {
+  const {
+    setModifiedText: setModifedText,
+    setAddedErrorSpans,
+  } = useTextAnnotation();
+
+  const {
+    setDiffContent,
+    setErrorSpans: setHighlightedError,
+  } = useSpanEvalContext();
 
   // **Functions**
   const handleAnnotatorChange = (annotator: string) => {
