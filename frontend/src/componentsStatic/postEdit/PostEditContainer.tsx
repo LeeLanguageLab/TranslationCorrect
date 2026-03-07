@@ -557,7 +557,7 @@ export const PostEditContainer: React.FC = () => {
 
   useEffect(() => {
     const onDocClick = (ev: globalThis.MouseEvent) => {
-      if (!(ev.target as HTMLElement).closest(".highlight, .delete-span-button, .span-score-section")) {
+      if (!(ev.target as HTMLElement).closest(".highlight, .delete-span-button, .span-score-section, .span-dropdown")) {
         setHoveredHighlight(null);
         setHoveredHighlightIdx(null);
         setDeleteButtonVisible(false);
