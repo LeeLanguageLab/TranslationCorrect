@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import "../index.css";
 import HighlightedText from "./postEdit/HighlightedText";
-import { generateDiff, PostEditContainer } from "./postEdit/PostEditContainer";
-import { ScoringContainer } from "./scoring/ScoringContainer";
+import { PostEditContainer } from "./postEdit/PostEditContainer";
 import { DatabaseSentenceView } from "./scoring/DatabaseSentenceView";
 import { useSpanEvalContext } from "./SpanEvalProvider";
-import { HighlightedError } from "../types";
 import { LoginForm } from "./scoring/LoginForm";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AnnotatorSelectorDropdown } from "./scoring/AnnotatorSelector";
 import QAComparisonContainer from "./qa/QAComparisonContainer";
-import { Span } from "../util/qaComparisonUtils";
 import logo from "../assets/logo.svg";
 import { useAnnotationApp } from "../context/AnnotationAppContext";
 import { useTextAnnotation } from "../context/TextAnnotationContext";
@@ -25,14 +22,9 @@ const App: React.FC = () => {
     originalSpans: originalHighlightedError,
     errorSpans: highlightedError,
     setErrorSpans,
-    curEntryIdx,
-    setEntryIdx,
     diffContent,
     setDiffContent,
-    spanSeverity,
     setSpanSeverity,
-    spanScores,
-    setSpanScores,
   } = useSpanEvalContext();
 
   // Application-level state from context
@@ -43,16 +35,15 @@ const App: React.FC = () => {
     currentDatabase,
     currentMode,
     forceScroll, setForceScroll,
-    dataset,
     sentenceData, setSentenceData,
   } = useAnnotationApp();
 
   // Text/annotation state from context
   const {
     modifiedText, setModifiedText,
-    addedErrorSpans, setAddedErrorSpans,
+    setAddedErrorSpans,
     overallScore, setOverallScore,
-    agreedSpans, setAgreedSpans,
+    agreedSpans,
   } = useTextAnnotation();
 
   // console.log(curEntryIdx);
