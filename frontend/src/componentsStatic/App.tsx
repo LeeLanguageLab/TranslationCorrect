@@ -519,6 +519,7 @@ const App: React.FC = () => {
                 username={username} 
                 machineTranslation={machineTranslation}
                 onAgreedSpansChange={setAgreedSpans}
+                activeLanguage={activeLanguage}
               />
             )}
 
