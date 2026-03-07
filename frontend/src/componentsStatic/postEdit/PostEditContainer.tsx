@@ -73,7 +73,7 @@ export const generateDiff = (original: string, modified: string, setModifiedText
 
 // **PostEditContainer Component**
 export const PostEditContainer: React.FC = () => {
-  const { translatedText: machineTranslation, setTranslatedText: setMachineTranslation, diffContent, setDiffContent, addNewErrorSpan, deleteErrorSpan, clearErrorSpans, errorSpans, setErrorSpans, updateSpanErrorType, updateSpanSeverity, spanSeverity, setSpanSeverity } = useSpanEvalContext();
+  const { translatedText: machineTranslation, setTranslatedText: setMachineTranslation, diffContent, setDiffContent, addNewErrorSpan, deleteErrorSpan, clearErrorSpans, errorSpans, setErrorSpans, updateSpanErrorType, updateSpanSeverity, spanSeverity, setSpanSeverity, selectedSpanIdx, setSelectedSpanIdx } = useSpanEvalContext();
   const { modifiedText, setModifiedText } = useTextAnnotation();
   const { currentMode } = useAnnotationApp();
 
@@ -432,14 +432,10 @@ export const PostEditContainer: React.FC = () => {
       setSelectedSpan(highlight.error_type);
       setHoveredHighlight(highlight);
       setSelectedHighlightIdx(highlightIdx);
+      setSelectedSpanIdx(highlightIdx);
       
-      // If user has selected a severity in dropdown, apply it to the span
-      if (spanSeverity && spanSeverity !== highlight.error_severity) {
-        updateSpanSeverity(highlightIdx, spanSeverity);
-      } else {
-        // Otherwise, just show the span's current severity in dropdown
-        setSpanSeverity(highlight.error_severity);
-      }
+      // Show the span's current severity in dropdown
+      setSpanSeverity(highlight.error_severity);
 
       const rect = e.currentTarget.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -461,12 +457,10 @@ export const PostEditContainer: React.FC = () => {
       }, 250);
     } else {
       setSelectedSpan(highlight.error_type);
-      // Show span's current severity, but don't overwrite if user has a selection
-      if (!spanSeverity) {
-        setSpanSeverity(highlight.error_severity);
-      }
+      setSpanSeverity(highlight.error_severity);
       setSpanDropdown(true);
       setSelectedHighlightIdx(highlightIdx);
+      setSelectedSpanIdx(highlightIdx);
 
       requestAnimationFrame(() => {
         setDropdownAnimation("fade-in");
@@ -563,10 +557,12 @@ export const PostEditContainer: React.FC = () => {
 
   useEffect(() => {
     const onDocClick = (ev: globalThis.MouseEvent) => {
-      if (!(ev.target as HTMLElement).closest(".highlight, .delete-span-button")) {
+      if (!(ev.target as HTMLElement).closest(".highlight, .delete-span-button, .span-score-section")) {
         setHoveredHighlight(null);
         setHoveredHighlightIdx(null);
         setDeleteButtonVisible(false);
+        setSelectedHighlightIdx(null);
+        setSelectedSpanIdx(undefined);
       }
     };
     document.addEventListener("mousedown", onDocClick as EventListener);
@@ -579,6 +575,7 @@ export const PostEditContainer: React.FC = () => {
     if (highlightInserted && errorSpans.length > 0 && !spanDropdown) {
       const lastHighlightIdx = errorSpans.length - 1;
       setSelectedHighlightIdx(lastHighlightIdx);
+      setSelectedSpanIdx(lastHighlightIdx);
       
       // Retry finding the element with backoff in case DOM hasn't updated yet
       let attempts = 0;

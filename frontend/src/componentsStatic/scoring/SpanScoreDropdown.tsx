@@ -8,9 +8,11 @@ export const SpanScoreDropdown: React.FC = () => {
 
   const { selectedSpanIdx, spanSeverity, setSpanSeverity, updateSpanSeverity } =
     useSpanEvalContext();
-  const handleSpanScoreChange = (index: number, severity: string) => {
+  const handleSpanScoreChange = (index: number | undefined, severity: string) => {
     setSpanSeverity(severity);
-    updateSpanSeverity(index, severity);
+    if (index !== undefined) {
+      updateSpanSeverity(index, severity);
+    }
   };
 
   //   Return JSX
