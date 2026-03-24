@@ -272,7 +272,7 @@ const HighlightedText: React.FC<HighlightTextProps> = ({
     highlight: HighlightedError;
     index: number;
   }
-  const ranges: Range[] = highlights.map((highlight, idx) => {
+  const ranges: Range[] = (highlights || []).map((highlight, idx) => {
     const startKey = highlightKey.includes("end")
       ? (highlightKey.replace("end", "start") as keyof HighlightedError)
       : (highlightKey as keyof HighlightedError);
