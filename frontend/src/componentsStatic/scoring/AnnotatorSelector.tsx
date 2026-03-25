@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import "../../index.css";
 import { useAnnotationApp } from "../../context/AnnotationAppContext";
 import { useTextAnnotation } from "../../context/TextAnnotationContext";
@@ -26,13 +26,41 @@ export const AnnotatorSelectorDropdown: React.FC = () => {
     setErrorSpans: setHighlightedError,
   } = useSpanEvalContext();
 
+  const currentSentence = sentenceData.find((sentence) => sentence._id === sentenceID);
+
+  let fixedAnnotators: string[] = [];
+  if (activeLanguage === "Cantonese") {
+    fixedAnnotators = ["loka9", "Phantom65536", "wingspecialist", "ethanc", "york"];
+  } else if (activeLanguage === "Mandarin") {
+    fixedAnnotators = ["RuntongLiang", "Hannah", "qianshi2"];
+  }
+
+  // Pull annotator usernames from submitted annotations.
+  const dbAnnotators = Array.from(
+    new Set(
+      (sentenceData || [])
+        .flatMap((sentence: any) => Object.keys(sentence?.annotations || {}))
+        .filter((key: string) => key.endsWith("_annotations"))
+        .map((key: string) => key.replace("_annotations", ""))
+    )
+  );
+
+  const annotatorOptions = Array.from(new Set([...fixedAnnotators, ...dbAnnotators]));
+  if (annotator && !annotatorOptions.includes(annotator)) {
+    annotatorOptions.push(annotator);
+  }
+
   // **Functions**
   const handleAnnotatorChange = (annotator: string) => {
-    const item = sentenceData.find(sentence => sentence._id === sentenceID);
+    const item = currentSentence;
     console.log("item:", item);
     setAnnotator(annotator);
     console.log("user:", annotator);
     console.log("username:", username);
+
+    if (!item) {
+      return;
+    }
 
     // Fetching the previous annotation data
     console.log("annotator has done this annotation already, loading previously submitted annotation");
@@ -89,7 +117,7 @@ export const AnnotatorSelectorDropdown: React.FC = () => {
           <option value="Major">Major</option>
         </select>
       </div> */}
-      {activeLanguage === "Cantonese" && (
+      {(activeLanguage === "Cantonese" || activeLanguage === "Mandarin") && (
         <div className="">
           <select
             name="user-dropdown"
@@ -99,27 +127,11 @@ export const AnnotatorSelectorDropdown: React.FC = () => {
               handleAnnotatorChange(e.target.value)
             }
           >
-            <option value="loka9">loka9</option>
-            <option value="Phantom65536">Phantom65536</option>
-            <option value="wingspecialist">wingspecialist</option>
-            <option value="ethanc">ethanc</option>
-            <option value="york">york</option>
-          </select>
-        </div>
-      )}
-      {activeLanguage === "Mandarin" && (
-        <div className="">
-          <select
-            name="user-dropdown"
-            id="user_dropdown"
-            value={annotator}
-            onChange={(e) =>
-              handleAnnotatorChange(e.target.value)
-            }
-          >
-            <option value="RuntongLiang">RuntongLiang</option>
-            <option value="Hannah">Hannah</option>
-            <option value="qianshi2">qianshi2</option>
+            {annotatorOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
           </select>
         </div>
       )}
