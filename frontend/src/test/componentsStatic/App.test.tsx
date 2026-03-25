@@ -2,29 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import App from '../../componentsStatic/App';
 
+let mockErrorSpans: any[] = [];
+
 // We mock Contexts so we can set up exactly the state before hitting Submit
 vi.mock('../../componentsStatic/SpanEvalProvider', () => ({
   useSpanEvalContext: () => ({
     origText: 'Original text',
     translatedText: 'Translated text',
-    errorSpans: [
-      {
-        original_text: 'bad word',
-        start_index_translation: 0,
-        end_index_translation: 8,
-        error_type: 'Grammar',
-        error_severity: 'Major',
-      }
-    ],
-    highlightedError: [
-      {
-        original_text: 'bad word',
-        start_index_translation: 0,
-        end_index_translation: 8,
-        error_type: 'Grammar',
-        error_severity: 'Major',
-      }
-    ],
+    errorSpans: mockErrorSpans,
     originalHighlightedError: [],
     setOrigText: vi.fn(),
     setTranslatedText: vi.fn(),
@@ -54,6 +39,15 @@ vi.mock('../../context/AnnotationAppContext', () => ({
 describe('App - Submit Annotation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockErrorSpans = [
+      {
+        original_text: 'bad word',
+        start_index_translation: 0,
+        end_index_translation: 8,
+        error_type: 'Grammar',
+        error_severity: 'Major',
+      },
+    ];
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
@@ -119,6 +113,42 @@ describe('App - Submit Annotation', () => {
       error_text_segment: 'bad word',
       start_index: 0,
       end_index: 8,
+      error_type: 'Grammar',
+      error_severity: 'Major',
+    });
+  });
+
+  it('submits QA spans with error_type even when source uses legacy keys', async () => {
+    setupMockForMode('QA Mode');
+    mockErrorSpans = [
+      {
+        error_text_segment: 'legacy span text',
+        start_index: 3,
+        end_index: 9,
+        errorType: 'Grammar',
+        errorSeverity: 'Major',
+      },
+    ];
+
+    render(<App />);
+
+    const submitBtn = screen.getByText('Submit QA');
+
+    await act(async () => {
+      submitBtn.click();
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    const fetchCall = (global.fetch as any).mock.calls[0];
+    const options = fetchCall[1];
+    const body = JSON.parse(options.body);
+
+    expect(body.test_user_qa.annotator).toBe('original_annotator');
+    expect(body.test_user_qa.annotatedSpans[0]).toMatchObject({
+      error_text_segment: 'legacy span text',
+      start_index: 3,
+      end_index: 9,
       error_type: 'Grammar',
       error_severity: 'Major',
     });

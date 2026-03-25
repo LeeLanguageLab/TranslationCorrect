@@ -164,15 +164,25 @@ export const DatabaseSentenceView: React.FC = () => {
     setAddedErrorSpans([]);
     setHighlightedError([]);
 
-    if (`${annotator}_annotations` in item.annotations) {
-      handlePrevAnnotation(item);
+    const qaKey = `${username}_qa`;
+    const annotatorKey = `${annotator}_annotations`;
+    const hasQaForAnnotator =
+      currentMode === "QA Mode" &&
+      item.annotations &&
+      item.annotations[qaKey] &&
+      item.annotations[qaKey].annotator === annotator;
+
+    if (hasQaForAnnotator) {
+      handlePrevAnnotation(item, qaKey);
+    } else if (item.annotations && annotatorKey in item.annotations) {
+      handlePrevAnnotation(item, annotatorKey);
     }
   };
 
-  const handlePrevAnnotation = (item: any) => {
+  const handlePrevAnnotation = (item: any, annotationKey: string) => {
     // Fetching the previous annotation data
     console.log("user has done this annotation already, loading previously submitted annotation");
-    const prev_annotation = item.annotations[`${annotator}_annotations`];
+    const prev_annotation = item.annotations[annotationKey];
     console.log("previous annotation data:", prev_annotation);
 
     // There was a bug earlier on with the code and I couldn't edit the database

@@ -176,13 +176,25 @@ const QAComparisonContainer: React.FC = () => {
         });
     }
 
-    setQaUsers(fixedQaUsers);
+    // Pull all QA usernames that exist in database annotations for this language dataset.
+    const dbQaUsers = Array.from(
+      new Set(
+        (sentenceData || [])
+          .flatMap((sentence: any) => Object.keys(sentence?.annotations || {}))
+          .filter((key: string) => key.endsWith("_qa"))
+          .map((key: string) => key.replace("_qa", ""))
+      )
+    );
 
-    const defaultQaUser = fixedQaUsers.includes(selectedQaUser)
+    const combinedQaUsers = Array.from(new Set([...fixedQaUsers, ...dbQaUsers]));
+
+    setQaUsers(combinedQaUsers);
+
+    const defaultQaUser = combinedQaUsers.includes(selectedQaUser)
       ? selectedQaUser
-      : fixedQaUsers.includes(username)
+      : combinedQaUsers.includes(username)
       ? username
-      : fixedQaUsers[0] || "";
+      : combinedQaUsers[0] || "";
 
     if (defaultQaUser !== selectedQaUser) {
       setSelectedQaUser(defaultQaUser);

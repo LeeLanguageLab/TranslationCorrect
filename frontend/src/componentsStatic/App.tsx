@@ -46,6 +46,22 @@ const App: React.FC = () => {
     agreedSpans,
   } = useTextAnnotation();
 
+  const normalizeSpanForSubmission = (span: any) => {
+    const error_text_segment = span.error_text_segment ?? span.original_text ?? "";
+    const start_index = span.start_index ?? span.start_index_translation;
+    const end_index = span.end_index ?? span.end_index_translation;
+    const error_type = span.error_type ?? span.errorType ?? "Addition";
+    const error_severity = span.error_severity ?? span.errorSeverity ?? "Minor";
+
+    return {
+      error_text_segment,
+      start_index,
+      end_index,
+      error_type,
+      error_severity,
+    };
+  };
+
   // console.log(curEntryIdx);
 
   // const [diffContent, setDiffContent] =
@@ -194,21 +210,7 @@ const App: React.FC = () => {
     } else {
       // Use highlightedError for other modes
       packageHighlightedErrors = {
-        annotatedSpans: highlightedError.map(
-          ({
-            original_text: error_text_segment,
-            start_index_translation: start_index,
-            end_index_translation: end_index,
-            error_type,
-            error_severity,
-          }) => ({
-            error_text_segment,
-            start_index,
-            end_index,
-            error_type,
-            error_severity,
-          })
-        ),
+        annotatedSpans: highlightedError.map((span) => normalizeSpanForSubmission(span)),
         overall_translation_score: overallScore,
         corrected_sentence: modifiedText,
       };

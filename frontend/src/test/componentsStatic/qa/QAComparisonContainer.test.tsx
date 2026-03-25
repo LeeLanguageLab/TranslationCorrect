@@ -75,4 +75,35 @@ describe('QAComparisonContainer', () => {
     // Select the correct User
     expect(screen.getByText('QA user')).toBeInTheDocument();
   });
+
+  it('includes database QA users alongside fixed QA users in dropdown', () => {
+    (useAnnotationApp as any).mockReturnValue({
+      username: 'admin',
+      activeLanguage: 'Cantonese',
+      sentenceData: [
+        {
+          _id: '1',
+          mt: 'Machine translation sentence here',
+          annotations: {
+            'annotator1_annotations': {
+              corrected_sentence: 'Machine translation sentence here',
+              annotatedSpans: [],
+            },
+            'newQaUser_qa': {
+              annotator: 'annotator1',
+              corrected_sentence: 'Machine translation sentence here',
+              annotatedSpans: [],
+            },
+          },
+        },
+      ],
+      annotator: 'annotator1',
+      sentenceID: '1',
+    });
+
+    render(<QAComparisonContainer />);
+
+    expect(screen.getByRole('option', { name: 'Phantom65536' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'newQaUser' })).toBeInTheDocument();
+  });
 });
