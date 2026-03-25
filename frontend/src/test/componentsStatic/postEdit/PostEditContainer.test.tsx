@@ -53,7 +53,7 @@ describe('PostEditContainer', () => {
   });
 
   it('renders correctly', () => {
-    render(<PostEditContainer initialMachineTranslation="Test" />);
+    render(<PostEditContainer />);
     expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 });

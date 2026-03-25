@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getSpanDiffs, adjustMovingSpanIndices } from '../../util/qaComparisonUtils';
-import { Span } from '../../types';
+import { Span } from '../../util/qaComparisonUtils';
 
 describe('qaComparisonUtils', () => {
   describe('getSpanDiffs', () => {
