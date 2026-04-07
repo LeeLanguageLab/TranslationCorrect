@@ -79,9 +79,18 @@ export const DatabaseSentenceView: React.FC = () => {
 
   const [row_active, setRow_active] = useState<boolean>(false);
 
-  const mandarin_annotators = ["Hannah", "RuntongLiang", "qianshi2"];
-  const cantonese_annotators = ["loka9", "Phantom65536", 
-                                "wingspecialist", "ethanc"];
+  const getAnnotatorsFromSentence = (sentence: any): string[] =>
+    Object.keys(sentence?.annotations || {})
+      .filter(
+        (key: string) =>
+          key.endsWith("_annotations") && key !== "finalized_annotations"
+      )
+      .map((key: string) => key.replace("_annotations", ""));
+
+  const getAvailableAnnotators = (): string[] => {
+    const currentSentence = sentenceData.find((item) => item._id === sentenceID);
+    return getAnnotatorsFromSentence(currentSentence);
+  };
 
   const bug_sentence = 'On Monday, scientists from the Stanford University School of Medicine ' + 
                        'announced the invention of a new diagnostic tool that can sort cells by ' + 
@@ -339,31 +348,31 @@ export const DatabaseSentenceView: React.FC = () => {
   };
 
 
-  // Effect to handle mode changes
+  // Keep annotator selection aligned with current mode/language/sentence data.
   useEffect(() => {
     noFunnyBusiness();
-  }, [currentMode]);
+  }, [currentMode, activeLanguage, sentenceData, sentenceID, username]);
 
-  // Effect to handle language changes
-  useEffect(() => {
-    noFunnyBusiness();
-  }, [activeLanguage]);
   const noFunnyBusiness = () => {
     // In Annotation Mode, the annotator should be the current user
     if (currentMode !== "QA Mode" && currentMode !== "QA Comparison") {
       console.log("we are now in annotation mode")
       console.log("Setting annotator to current user:", username);
-      setAnnotator(username);
+      if (username && annotator !== username) {
+        setAnnotator(username);
+      }
     } else {
-      // In QA Mode, set default annotator based on language if current user is not an annotator
+      // In QA modes, default to an annotator found in database annotations.
       console.log("we are now in qa mode")
       console.log(activeLanguage);
       console.log(username);
-      if (activeLanguage === "Mandarin" && ! mandarin_annotators.includes(username)) {
-        console.log("set to hannah");
-        setAnnotator("Hannah");
-      } else if (activeLanguage === "Cantonese" && ! cantonese_annotators.includes(username)) {
-        setAnnotator("loka9");
+      const availableAnnotators = getAvailableAnnotators();
+      const nextAnnotator = availableAnnotators.includes(username)
+        ? username
+        : availableAnnotators[0] || "";
+
+      if ((annotator || "") !== nextAnnotator) {
+        setAnnotator(nextAnnotator);
       }
       console.log(annotator);
     }

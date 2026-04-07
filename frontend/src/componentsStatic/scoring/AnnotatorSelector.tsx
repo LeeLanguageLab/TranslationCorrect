@@ -26,29 +26,28 @@ export const AnnotatorSelectorDropdown: React.FC = () => {
     setErrorSpans: setHighlightedError,
   } = useSpanEvalContext();
 
+  const extractAnnotatorsFromSentence = (sentence: any): string[] =>
+    Object.keys(sentence?.annotations || {})
+      .filter(
+        (key: string) =>
+          key.endsWith("_annotations") && key !== "finalized_annotations"
+      )
+      .map((key: string) => key.replace("_annotations", ""));
+
   const currentSentence = sentenceData.find((sentence) => sentence._id === sentenceID);
 
-  let fixedAnnotators: string[] = [];
-  if (activeLanguage === "Cantonese") {
-    fixedAnnotators = ["loka9", "Phantom65536", "wingspecialist", "ethanc", "york"];
-  } else if (activeLanguage === "Mandarin") {
-    fixedAnnotators = ["RuntongLiang", "Hannah", "qianshi2"];
-  }
+  const annotatorOptions = extractAnnotatorsFromSentence(currentSentence);
 
-  // Pull annotator usernames from submitted annotations.
-  const dbAnnotators = Array.from(
-    new Set(
-      (sentenceData || [])
-        .flatMap((sentence: any) => Object.keys(sentence?.annotations || {}))
-        .filter((key: string) => key.endsWith("_annotations"))
-        .map((key: string) => key.replace("_annotations", ""))
-    )
-  );
+  React.useEffect(() => {
+    const selectedAnnotator = annotator ?? "";
+    const nextAnnotator = annotatorOptions.includes(selectedAnnotator)
+      ? selectedAnnotator
+      : annotatorOptions[0] || "";
 
-  const annotatorOptions = Array.from(new Set([...fixedAnnotators, ...dbAnnotators]));
-  if (annotator && !annotatorOptions.includes(annotator)) {
-    annotatorOptions.push(annotator);
-  }
+    if (selectedAnnotator !== nextAnnotator) {
+      setAnnotator(nextAnnotator);
+    }
+  }, [annotator, annotatorOptions, setAnnotator]);
 
   // **Functions**
   const handleAnnotatorChange = (annotator: string) => {
@@ -117,21 +116,28 @@ export const AnnotatorSelectorDropdown: React.FC = () => {
           <option value="Major">Major</option>
         </select>
       </div> */}
-      {(activeLanguage === "Cantonese" || activeLanguage === "Mandarin") && (
+      {(activeLanguage === "Cantonese" ||
+        activeLanguage === "Mandarin" ||
+        activeLanguage === "Shanghainese") && (
         <div className="">
           <select
             name="user-dropdown"
             id="user_dropdown"
-            value={annotator}
+            value={annotatorOptions.includes(annotator ?? "") ? annotator ?? "" : ""}
+            disabled={annotatorOptions.length === 0}
             onChange={(e) =>
               handleAnnotatorChange(e.target.value)
             }
           >
-            {annotatorOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
+            {annotatorOptions.length === 0 ? (
+              <option value="">No annotators found</option>
+            ) : (
+              annotatorOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))
+            )}
           </select>
         </div>
       )}
