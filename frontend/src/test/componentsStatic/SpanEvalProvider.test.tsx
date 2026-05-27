@@ -1,5 +1,5 @@
 import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SpanEvalProvider, useSpanEvalContext } from '../../componentsStatic/SpanEvalProvider';
 import { TextAnnotationProvider } from '../../context/TextAnnotationContext';
 
@@ -47,6 +47,35 @@ const TestComponent = () => {
 };
 
 describe('SpanEvalProvider', () => {
+  let originalLocalStorage: Storage | undefined;
+
+  beforeEach(() => {
+    originalLocalStorage = (globalThis as any).localStorage;
+    const storage = {
+      getItem: vi.fn().mockReturnValue(null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    } as Storage;
+
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: storage,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    if (originalLocalStorage) {
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: originalLocalStorage,
+        configurable: true,
+      });
+    } else {
+      delete (globalThis as any).localStorage;
+    }
+    originalLocalStorage = undefined;
+  });
+
   const renderProvider = () => {
     render(
       <TextAnnotationProvider>

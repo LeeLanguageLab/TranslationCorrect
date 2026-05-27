@@ -14,6 +14,7 @@ export const AnnotatorSelectorDropdown: React.FC = () => {
     sentenceData,
     sentenceID,
     activeLanguage,
+    currentMode,
   } = useAnnotationApp();
 
   const {
@@ -98,6 +99,12 @@ export const AnnotatorSelectorDropdown: React.FC = () => {
   };
 
   //   Return JSX
+  const shouldShowAnnotatorSelector =
+    (activeLanguage === "Cantonese" ||
+      activeLanguage === "Mandarin" ||
+      activeLanguage === "Shanghainese") &&
+    !(activeLanguage === "Mandarin" && currentMode === "QA Comparison");
+
   return (
     <div className="span-score-section">
       {/* TODO: Update title */}
@@ -116,9 +123,7 @@ export const AnnotatorSelectorDropdown: React.FC = () => {
           <option value="Major">Major</option>
         </select>
       </div> */}
-      {(activeLanguage === "Cantonese" ||
-        activeLanguage === "Mandarin" ||
-        activeLanguage === "Shanghainese") && (
+      {shouldShowAnnotatorSelector && (
         <div className="">
           <select
             name="user-dropdown"

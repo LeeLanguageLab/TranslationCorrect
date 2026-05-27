@@ -94,23 +94,42 @@ export const getSpanDiffs = (
   return [annotationRemainderSpans, qaRemainderSpans, sharedSpans];
 };
 
-export const getSharedSpansSentence = (
+export const getSharedSpansDisplay = (
   mt: string,
   sharedSpans: Span[]
-): string => {
+): { sentence: string; displaySpans: Span[] } => {
+  const sortedSharedSpans = copySpanArr(sharedSpans);
+  sortSpans(sortedSharedSpans);
 
-  let newSentence = mt;
-  sortSpans(sharedSpans);
+  let sentence = mt;
+  let offset = 0;
+  const displaySpans: Span[] = [];
 
-  for (const span of sharedSpans) {
-    if (span.error_type === "Omission") {
-      newSentence = newSentence.slice(0, span.start_index)
-                    + span.error_text_segment
-                    + newSentence.slice(span.start_index);
-    }
+  for (const span of sortedSharedSpans) {
+    const originalStart = span.start_index;
+    const originalEnd = span.end_index;
+    const adjustedStart = originalStart + offset;
+    const replacement = span.error_text_segment ?? "";
+    const mtSlice = mt.slice(originalStart, originalEnd);
+    const shouldInsert = mtSlice !== replacement;
+    const replaceLength = shouldInsert ? 0 : (originalEnd - originalStart);
+    const adjustedEnd = adjustedStart + replaceLength;
+
+    sentence = sentence.slice(0, adjustedStart)
+      + replacement
+      + sentence.slice(adjustedEnd);
+
+    displaySpans.push({
+      ...span,
+      start_index: adjustedStart,
+      end_index: adjustedStart + replacement.length,
+    });
+
+    offset += replacement.length - replaceLength;
   }
-  return newSentence;
-}
+
+  return { sentence, displaySpans };
+};
 
 export const adjustMovingSpanIndices = (
   sourceSpans: Span[],

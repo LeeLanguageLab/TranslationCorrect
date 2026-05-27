@@ -32,6 +32,7 @@ describe('AnnotatorSelectorDropdown', () => {
       setAnnotator: vi.fn(),
       sentenceID: 'sentence-1',
       activeLanguage: 'Mandarin',
+      currentMode: 'QA Mode',
       sentenceData: [
         {
           _id: 'sentence-1',
@@ -71,6 +72,7 @@ describe('AnnotatorSelectorDropdown', () => {
       setAnnotator: vi.fn(),
       sentenceID: 'sentence-sh',
       activeLanguage: 'Shanghainese',
+      currentMode: 'QA Mode',
       sentenceData: [
         {
           _id: 'sentence-sh',
@@ -86,5 +88,29 @@ describe('AnnotatorSelectorDropdown', () => {
 
     expect(screen.getByRole('combobox', { name: '' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'sh_user' })).toBeInTheDocument();
+  });
+
+  it('hides selector in Mandarin QA Comparison mode', () => {
+    mockUseAnnotationApp.mockReturnValue({
+      username: 'qa_user',
+      annotator: 'Hannah',
+      setAnnotator: vi.fn(),
+      sentenceID: 'sentence-1',
+      activeLanguage: 'Mandarin',
+      currentMode: 'QA Comparison',
+      sentenceData: [
+        {
+          _id: 'sentence-1',
+          mt: 'machine text',
+          annotations: {
+            Hannah_annotations: { annotatedSpans: [] },
+          },
+        },
+      ],
+    });
+
+    render(<AnnotatorSelectorDropdown />);
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });

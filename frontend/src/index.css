@@ -1574,6 +1574,40 @@ select:hover {
   width: 100%;
 }
 
+.qa-user-selector {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.qa-user-selector label {
+  color: #cfcfcf;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.qa-user-selector select {
+  background-color: #0f0f0f;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #fff;
+  padding: 8px 10px;
+  min-width: 200px;
+}
+
+.qa-person-selectors {
+  justify-content: space-between;
+}
+
+.qa-person-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+
 .qa-comparison-box {
   background-color: #1a1a1a;
   border: 1px solid #333;

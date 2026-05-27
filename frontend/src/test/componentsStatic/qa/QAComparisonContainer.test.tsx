@@ -32,18 +32,16 @@ describe('QAComparisonContainer', () => {
       activeLanguage: 'Mandarin',
       sentenceData: [
         {
-          id: '1',
+          _id: '1',
           mt: 'Machine translation sentence here',
           annotations: {
-            'annotator1_annotations': {
+            'personA_qa': {
               annotatedSpans: [
                 { error_text_segment: 'translation', start_index: 8, end_index: 19, error_type: 'Grammar', error_severity: 'Minor' }
               ]
             },
-            'admin_qa': {
-              annotator: 'annotator1',
+            'personB_qa': {
               annotatedSpans: [
-                { error_text_segment: 'translation', start_index: 8, end_index: 19, error_type: 'Grammar', error_severity: 'Minor' },
                 { error_text_segment: 'here', start_index: 20, end_index: 24, error_type: 'Spelling', error_severity: 'Major' }
               ]
             }
@@ -61,19 +59,18 @@ describe('QAComparisonContainer', () => {
     });
   });
 
-  it('renders and compares spans correctly', () => {
+  it('renders Mandarin QA comparison with Person A/B selectors', () => {
     render(<QAComparisonContainer />);
 
-    // In our mock, there is one shared span, one QA span, and no unique Annotator spans.
-    // Let's verify text in the UI (like QA User Name, shared spans count, etc based on component's rendering)
-
-    // Verify UI has columns/sections for Annotation, Shared, and QA
-    expect(screen.getByText('Annotator Spans (annotator1)')).toBeInTheDocument();
-    expect(screen.getByText('QA Spans (admin)')).toBeInTheDocument();
+    // Verify UI has columns/sections for Person A, Shared, and Person B
+    expect(screen.getByText('Person A Spans (personA)')).toBeInTheDocument();
+    expect(screen.getByText('Person B Spans (personB)')).toBeInTheDocument();
     expect(screen.getByText('Agreed Upon Spans')).toBeInTheDocument();
     
-    // Select the correct User
-    expect(screen.getByText('QA user')).toBeInTheDocument();
+    // Selectors should be Person A/B and no single QA user selector
+    expect(screen.getByText('QA Span Person A')).toBeInTheDocument();
+    expect(screen.getByText('QA Span Person B')).toBeInTheDocument();
+    expect(screen.queryByText('QA user')).not.toBeInTheDocument();
   });
 
   it('includes database QA users alongside fixed QA users in dropdown', () => {

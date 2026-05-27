@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { copySpanArr, adjustMovingSpanIndices, getSharedSpansSentence, getSpanDiffs, Span } from "../../util/qaComparisonUtils";
+import { copySpanArr, adjustMovingSpanIndices, getSharedSpansDisplay, getSpanDiffs, Span } from "../../util/qaComparisonUtils";
 import { HighlightedError, colorMappings } from "../../types";
 import "../../index.css";
 import { useAnnotationApp } from "../../context/AnnotationAppContext";
@@ -112,9 +112,14 @@ const QAComparisonContainer: React.FC = () => {
   const [annotationSpans, setAnnotationSpans] = useState<Span[]>([]);
   const [qaSpans, setQASpans] = useState<Span[]>([]);
   const [sharedSpans, setSharedSpans] = useState<Span[]>([]);
+  const [displaySharedSpans, setDisplaySharedSpans] = useState<Span[]>([]);
   const [hasQAForAnnotator, setHasQAForAnnotator] = useState<boolean>(false);
   const [qaUsers, setQaUsers] = useState<string[]>([]);
   const [selectedQaUser, setSelectedQaUser] = useState<string>(username);
+  const [selectedPersonA, setSelectedPersonA] = useState<string>("");
+  const [selectedPersonB, setSelectedPersonB] = useState<string>("");
+  const [hasPersonA, setHasPersonA] = useState<boolean>(false);
+  const [hasPersonB, setHasPersonB] = useState<boolean>(false);
   const [annotatorCorrectedSentence, setAnnotatorCorrectedSentence] = useState<string>(machineTranslation);
   const [qaCorrectedSentence, setQACorrectedSentence] = useState<string>(machineTranslation);
   const [sharedSpansSentence, setSharedSpansSentence] = useState<string>(machineTranslation);
@@ -143,14 +148,20 @@ const QAComparisonContainer: React.FC = () => {
 
   // Load data when component mounts or when sentence/annotator changes
   const loadComparisonData = useCallback(() => {
+    const isMandarinComparison = activeLanguage === "Mandarin";
     const currentSentence = sentenceData.find((item: any) => item._id === sentenceID);
     if (!currentSentence) {
       setAnnotationSpans([]);
       setQASpans([]);
       setSharedSpans([]);
+      setDisplaySharedSpans([]);
       setHasQAForAnnotator(false);
       setQaUsers([]);
       setSelectedQaUser(username);
+      setSelectedPersonA("");
+      setSelectedPersonB("");
+      setHasPersonA(false);
+      setHasPersonB(false);
       setAnnotatorCorrectedSentence(machineTranslation);
       setQACorrectedSentence(machineTranslation);
       setSharedSpansSentence(machineTranslation);
@@ -161,107 +172,154 @@ const QAComparisonContainer: React.FC = () => {
       return;
     }
 
-    // Define fixed QA user lists based on language
-    let fixedQaUsers: string[] = [];
-    if (activeLanguage === "Cantonese") {
-      fixedQaUsers = ["Phantom65536", "wingspecialist", "york"];
-    } else if (activeLanguage === "Mandarin") {
-      // Get dynamic list for Mandarin
-      fixedQaUsers = Object.keys(currentSentence.annotations || {})
+    let nextQaUsers: string[] = [];
+    if (isMandarinComparison) {
+      nextQaUsers = Object.keys(currentSentence.annotations || {})
         .filter((key) => key.endsWith("_qa"))
-        .map((key) => key.replace("_qa", ""))
-        .filter((qaUser) => {
-          const qaEntry = currentSentence.annotations?.[`${qaUser}_qa`];
-          return qaEntry?.annotator === annotator;
-        });
+        .map((key) => key.replace("_qa", ""));
+    } else {
+      // Define fixed QA user lists based on language
+      let fixedQaUsers: string[] = [];
+      if (activeLanguage === "Cantonese") {
+        fixedQaUsers = ["Phantom65536", "wingspecialist", "york"];
+      }
+
+      // Pull all QA usernames that exist in database annotations for this language dataset.
+      const dbQaUsers = Array.from(
+        new Set(
+          (sentenceData || [])
+            .flatMap((sentence: any) => Object.keys(sentence?.annotations || {}))
+            .filter((key: string) => key.endsWith("_qa"))
+            .map((key: string) => key.replace("_qa", ""))
+        )
+      );
+
+      nextQaUsers = Array.from(new Set([...fixedQaUsers, ...dbQaUsers]));
     }
 
-    // Pull all QA usernames that exist in database annotations for this language dataset.
-    const dbQaUsers = Array.from(
-      new Set(
-        (sentenceData || [])
-          .flatMap((sentence: any) => Object.keys(sentence?.annotations || {}))
-          .filter((key: string) => key.endsWith("_qa"))
-          .map((key: string) => key.replace("_qa", ""))
-      )
-    );
+    setQaUsers(nextQaUsers);
 
-    const combinedQaUsers = Array.from(new Set([...fixedQaUsers, ...dbQaUsers]));
+    if (isMandarinComparison) {
+      const resolvedPersonA = nextQaUsers.includes(selectedPersonA)
+        ? selectedPersonA
+        : nextQaUsers[0] || "";
+      const fallbackPersonB = nextQaUsers[1] || nextQaUsers[0] || "";
+      const resolvedPersonB = nextQaUsers.includes(selectedPersonB)
+        ? selectedPersonB
+        : fallbackPersonB;
 
-    setQaUsers(combinedQaUsers);
+      if (resolvedPersonA !== selectedPersonA) {
+        setSelectedPersonA(resolvedPersonA);
+      }
+      if (resolvedPersonB !== selectedPersonB) {
+        setSelectedPersonB(resolvedPersonB);
+      }
 
-    const defaultQaUser = combinedQaUsers.includes(selectedQaUser)
-      ? selectedQaUser
-      : combinedQaUsers.includes(username)
-      ? username
-      : combinedQaUsers[0] || "";
-
-    if (defaultQaUser !== selectedQaUser) {
-      setSelectedQaUser(defaultQaUser);
-    }
-
-    // Get annotator spans
-    const annotatorKey = `${annotator}_annotations`;
-    const annotatorAnnotation = currentSentence.annotations?.[annotatorKey];
-    const annotatorSpans: Span[] = annotatorAnnotation?.annotatedSpans?.map((span: any) => ({
-      start_index: span.start_index,
-      end_index: span.end_index,
-      error_text_segment: span.error_text_segment,
-      error_type: span.error_type,
-      error_severity: span.error_severity,
-    })) || [];
-
-    // Set annotator corrected sentence
-    const annotatorCorrected = annotatorAnnotation?.corrected_sentence || machineTranslation;
-    setAnnotatorCorrectedSentence(annotatorCorrected);
-
-    // Update Original Annotation Spans
-    setOriginalAnnotationSpans(copySpanArr(annotatorSpans));
-
-    // Get QA user spans
-    const qaKey = selectedQaUser ? `${selectedQaUser}_qa` : "";
-    const qaAnnotation = currentSentence.annotations?.[qaKey];
-    
-    // Check if the QA was done for the current annotator
-    let qaUserSpans: Span[] = [];
-    let hasQA = false;
-    let qaCorrected = machineTranslation;
-    
-    if (qaAnnotation && qaAnnotation.annotator === annotator) {
-      qaUserSpans = qaAnnotation.annotatedSpans?.map((span: any) => ({
+      // Person A spans (left box)
+      const personAKey = resolvedPersonA ? `${resolvedPersonA}_qa` : "";
+      const personAAnnotation = currentSentence.annotations?.[personAKey];
+      const personASpans: Span[] = personAAnnotation?.annotatedSpans?.map((span: any) => ({
         start_index: span.start_index,
         end_index: span.end_index,
         error_text_segment: span.error_text_segment,
         error_type: span.error_type,
         error_severity: span.error_severity,
       })) || [];
-      
-      // Set QA corrected sentence
-      qaCorrected = qaAnnotation?.corrected_sentence || machineTranslation;
-      hasQA = true;
+
+      const personACorrected = personAAnnotation?.corrected_sentence || machineTranslation;
+      setAnnotatorCorrectedSentence(personACorrected);
+      setHasPersonA(Boolean(personAAnnotation));
+      setOriginalAnnotationSpans(copySpanArr(personASpans));
+
+      // Person B spans (right box)
+      const personBKey = resolvedPersonB ? `${resolvedPersonB}_qa` : "";
+      const personBAnnotation = currentSentence.annotations?.[personBKey];
+      const personBSpans: Span[] = personBAnnotation?.annotatedSpans?.map((span: any) => ({
+        start_index: span.start_index,
+        end_index: span.end_index,
+        error_text_segment: span.error_text_segment,
+        error_type: span.error_type,
+        error_severity: span.error_severity,
+      })) || [];
+
+      const personBCorrected = personBAnnotation?.corrected_sentence || machineTranslation;
+      setQACorrectedSentence(personBCorrected);
+      setHasPersonB(Boolean(personBAnnotation));
+      setOriginalQaSpans(copySpanArr(personBSpans));
+
+      const [annotationRemainder, qaRemainder, shared] = getSpanDiffs(personASpans, personBSpans);
+      const sharedDisplay = getSharedSpansDisplay(machineTranslation, shared);
+      setSharedSpansSentence(sharedDisplay.sentence);
+      setDisplaySharedSpans(sharedDisplay.displaySpans);
+      setAnnotationSpans(annotationRemainder);
+      setQASpans(qaRemainder);
+      setSharedSpans(shared);
+    } else {
+      const defaultQaUser = nextQaUsers.includes(selectedQaUser)
+        ? selectedQaUser
+        : nextQaUsers.includes(username)
+        ? username
+        : nextQaUsers[0] || "";
+
+      if (defaultQaUser !== selectedQaUser) {
+        setSelectedQaUser(defaultQaUser);
+      }
+
+      // Get annotator spans
+      const annotatorKey = `${annotator}_annotations`;
+      const annotatorAnnotation = currentSentence.annotations?.[annotatorKey];
+      const annotatorSpans: Span[] = annotatorAnnotation?.annotatedSpans?.map((span: any) => ({
+        start_index: span.start_index,
+        end_index: span.end_index,
+        error_text_segment: span.error_text_segment,
+        error_type: span.error_type,
+        error_severity: span.error_severity,
+      })) || [];
+
+      const annotatorCorrected = annotatorAnnotation?.corrected_sentence || machineTranslation;
+      setAnnotatorCorrectedSentence(annotatorCorrected);
+      setOriginalAnnotationSpans(copySpanArr(annotatorSpans));
+
+      // Get QA user spans
+      const qaKey = defaultQaUser ? `${defaultQaUser}_qa` : "";
+      const qaAnnotation = currentSentence.annotations?.[qaKey];
+
+      let qaUserSpans: Span[] = [];
+      let hasQA = false;
+      let qaCorrected = machineTranslation;
+
+      if (qaAnnotation && qaAnnotation.annotator === annotator) {
+        qaUserSpans = qaAnnotation.annotatedSpans?.map((span: any) => ({
+          start_index: span.start_index,
+          end_index: span.end_index,
+          error_text_segment: span.error_text_segment,
+          error_type: span.error_type,
+          error_severity: span.error_severity,
+        })) || [];
+
+        qaCorrected = qaAnnotation?.corrected_sentence || machineTranslation;
+        hasQA = true;
+      }
+
+      setQACorrectedSentence(qaCorrected);
+      setHasQAForAnnotator(hasQA);
+      setOriginalQaSpans(copySpanArr(qaUserSpans));
+
+      const [annotationRemainder, qaRemainder, shared] = getSpanDiffs(annotatorSpans, qaUserSpans);
+      const sharedDisplay = getSharedSpansDisplay(machineTranslation, shared);
+      setSharedSpansSentence(sharedDisplay.sentence);
+      setDisplaySharedSpans(sharedDisplay.displaySpans);
+      setAnnotationSpans(annotationRemainder);
+      setQASpans(qaRemainder);
+      setSharedSpans(shared);
     }
-
-    setQACorrectedSentence(qaCorrected);
-    setHasQAForAnnotator(hasQA);
-
-    // Update Original QA Spans
-    setOriginalQaSpans(copySpanArr(qaUserSpans));
-
-    // Use getSpanDiffs to compare spans
-    const [annotationRemainder, qaRemainder, shared] = getSpanDiffs(annotatorSpans, qaUserSpans);
-
-    setSharedSpansSentence(getSharedSpansSentence(machineTranslation, shared));
-
-    setAnnotationSpans(annotationRemainder);
-    setQASpans(qaRemainder);
-    setSharedSpans(shared);
     
     // Clear selection when data changes
     setSelectedSpan(null);
     setMoveButtonPosition(null);
     setHoveredHighlight(null);
     setTooltipPosition(null);
-  }, [sentenceData, sentenceID, annotator, username, machineTranslation, selectedQaUser, activeLanguage]);
+  }, [sentenceData, sentenceID, annotator, username, machineTranslation, selectedQaUser, selectedPersonA, selectedPersonB, activeLanguage]);
 
   useEffect(() => {
     loadComparisonData();
@@ -336,24 +394,13 @@ const QAComparisonContainer: React.FC = () => {
     // Span indices need to be modified to fit sharedSpansSentence
     adjustMovingSpanIndices(sourceSpans, sharedSpans, span);
 
-    // If selectedSpan is an omission span, modify sharedSpans and the sentence
-    if (span.error_type === "Omission") {
-      for (const sharedSpan of sharedSpans) {
-        const offset = span.end_index - span.start_index;
-        if (span.start_index <= sharedSpan.start_index) {
-          sharedSpan.start_index += offset;
-          sharedSpan.end_index += offset;
-        }
-        const newSentence = sharedSpansSentence.slice(0, span.start_index) +
-                            span.error_text_segment +
-                            sharedSpansSentence.slice(span.start_index);
-        setSharedSpansSentence(newSentence);
-      }
-    }
-
     // Add to sharedSpans
     const newSharedSpans = [...sharedSpans, span];
     setSharedSpans(newSharedSpans);
+
+    const sharedDisplay = getSharedSpansDisplay(machineTranslation, newSharedSpans);
+    setSharedSpansSentence(sharedDisplay.sentence);
+    setDisplaySharedSpans(sharedDisplay.displaySpans);
 
     // Notify parent component of the change
     onAgreedSpansChange(newSharedSpans);
@@ -400,50 +447,108 @@ const QAComparisonContainer: React.FC = () => {
     onAgreedSpansChange(sharedSpans);
   }, [sharedSpans, onAgreedSpansChange]);
 
+  const isMandarinComparison = activeLanguage === "Mandarin";
+  const leftUserLabel = isMandarinComparison ? selectedPersonA || "N/A" : annotator || "N/A";
+  const rightUserLabel = isMandarinComparison ? selectedPersonB || "N/A" : selectedQaUser || "N/A";
+  const hasLeftData = isMandarinComparison ? hasPersonA : true;
+  const hasRightData = isMandarinComparison ? hasPersonB : hasQAForAnnotator;
+  const hasSharedData = isMandarinComparison ? hasPersonA && hasPersonB : hasQAForAnnotator;
+
   return (
     <div className="qa-comparison-container">
-      <div className="qa-user-selector">
-        <label htmlFor="qa_user_dropdown">QA user</label>
-        <select
-          name="qa-user-dropdown"
-          id="qa_user_dropdown"
-          value={selectedQaUser}
-          onChange={(e) => setSelectedQaUser(e.target.value)}
-          disabled={qaUsers.length === 0}
-        >
-          {qaUsers.length === 0 ? (
-            <option value="">No QA users</option>
-          ) : (
-            qaUsers.map((qaUser) => (
-              <option key={qaUser} value={qaUser}>
-                {qaUser}
-              </option>
-            ))
-          )}
-        </select>
-      </div>
+      {isMandarinComparison ? (
+        <div className="qa-user-selector qa-person-selectors">
+          <div className="qa-person-selector">
+            <label htmlFor="qa_person_a_dropdown">QA Span Person A</label>
+            <select
+              name="qa-person-a-dropdown"
+              id="qa_person_a_dropdown"
+              value={selectedPersonA}
+              onChange={(e) => setSelectedPersonA(e.target.value)}
+              disabled={qaUsers.length === 0}
+            >
+              {qaUsers.length === 0 ? (
+                <option value="">No QA users</option>
+              ) : (
+                qaUsers.map((qaUser) => (
+                  <option key={`person-a-${qaUser}`} value={qaUser}>
+                    {qaUser}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          <div className="qa-person-selector">
+            <label htmlFor="qa_person_b_dropdown">QA Span Person B</label>
+            <select
+              name="qa-person-b-dropdown"
+              id="qa_person_b_dropdown"
+              value={selectedPersonB}
+              onChange={(e) => setSelectedPersonB(e.target.value)}
+              disabled={qaUsers.length === 0}
+            >
+              {qaUsers.length === 0 ? (
+                <option value="">No QA users</option>
+              ) : (
+                qaUsers.map((qaUser) => (
+                  <option key={`person-b-${qaUser}`} value={qaUser}>
+                    {qaUser}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        </div>
+      ) : (
+        <div className="qa-user-selector">
+          <label htmlFor="qa_user_dropdown">QA user</label>
+          <select
+            name="qa-user-dropdown"
+            id="qa_user_dropdown"
+            value={selectedQaUser}
+            onChange={(e) => setSelectedQaUser(e.target.value)}
+            disabled={qaUsers.length === 0}
+          >
+            {qaUsers.length === 0 ? (
+              <option value="">No QA users</option>
+            ) : (
+              qaUsers.map((qaUser) => (
+                <option key={qaUser} value={qaUser}>
+                  {qaUser}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      )}
       {/* Annotator Spans Box */}
       <div className="qa-comparison-box annotator-spans-box">
         <div className="qa-comparison-header">
-          <h3>Annotator Spans ({annotator})</h3>
+          <h3>{isMandarinComparison ? "Person A Spans" : "Annotator Spans"} ({leftUserLabel})</h3>
           <span className="span-count">{annotationSpans.length} spans</span>
         </div>
         <div className="qa-comparison-content">
           <div className="qa-comparison-text">
-            <QAHighlightedText
-              text={annotatorCorrectedSentence}
-              highlights={convertSpansToHighlightedErrors(annotationSpans)}
-              highlightKey="end_index_translation"
-              onSpanClick={(span, spanIndex, event) => 
-                handleSpanClick(span, spanIndex, "annotator", event)
-              }
-              selectedSpanIndex={
-                selectedSpan?.source === "annotator" ? selectedSpan.index : null
-              }
-              onSpanHover={handleSpanHover}
-              onSpanMove={handleSpanMove}
-              onSpanLeave={handleSpanLeave}
-            />
+            {hasLeftData ? (
+              <QAHighlightedText
+                text={annotatorCorrectedSentence}
+                highlights={convertSpansToHighlightedErrors(annotationSpans)}
+                highlightKey="end_index_translation"
+                onSpanClick={(span, spanIndex, event) => 
+                  handleSpanClick(span, spanIndex, "annotator", event)
+                }
+                selectedSpanIndex={
+                  selectedSpan?.source === "annotator" ? selectedSpan.index : null
+                }
+                onSpanHover={handleSpanHover}
+                onSpanMove={handleSpanMove}
+                onSpanLeave={handleSpanLeave}
+              />
+            ) : (
+              <p className="no-qa-message">
+                {leftUserLabel} has no QA spans for this sentence.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -451,12 +556,12 @@ const QAComparisonContainer: React.FC = () => {
       {/* QA Spans Box */}
       <div className="qa-comparison-box qa-spans-box">
         <div className="qa-comparison-header">
-          <h3>QA Spans ({selectedQaUser || "N/A"})</h3>
+          <h3>{isMandarinComparison ? "Person B Spans" : "QA Spans"} ({rightUserLabel})</h3>
           <span className="span-count">{qaSpans.length} spans</span>
         </div>
         <div className="qa-comparison-content">
           <div className="qa-comparison-text">
-            {hasQAForAnnotator ? (
+            {hasRightData ? (
               <QAHighlightedText
                 text={qaCorrectedSentence}
                 highlights={convertSpansToHighlightedErrors(qaSpans)}
@@ -473,7 +578,9 @@ const QAComparisonContainer: React.FC = () => {
               />
             ) : (
               <p className="no-qa-message">
-                {selectedQaUser || "This user"} has not QA'd {annotator}'s annotations for this sentence.
+                {isMandarinComparison
+                  ? `${rightUserLabel} has no QA spans for this sentence.`
+                  : `${selectedQaUser || "This user"} has not QA'd ${annotator}'s annotations for this sentence.`}
               </p>
             )}
           </div>
@@ -488,10 +595,10 @@ const QAComparisonContainer: React.FC = () => {
         </div>
         <div className="qa-comparison-content">
           <div className="qa-comparison-text">
-            {hasQAForAnnotator ? (
+            {hasSharedData ? (
               <QAHighlightedText
                 text={sharedSpansSentence}
-                highlights={convertSpansToHighlightedErrors(sharedSpans)}
+                highlights={convertSpansToHighlightedErrors(displaySharedSpans)}
                 highlightKey="end_index_translation"
                 onSpanClick={() => {}} // No click action for agreed spans
                 selectedSpanIndex={null}
@@ -501,7 +608,9 @@ const QAComparisonContainer: React.FC = () => {
               />
             ) : (
               <p className="no-qa-message">
-                No agreed upon spans - {selectedQaUser || "this user"} has not QA'd {annotator}'s annotations.
+                {isMandarinComparison
+                  ? "No agreed upon spans - select QA spans for Person A and Person B."
+                  : `No agreed upon spans - ${selectedQaUser || "this user"} has not QA'd ${annotator}'s annotations.`}
               </p>
             )}
           </div>
@@ -582,7 +691,7 @@ const QAComparisonContainer: React.FC = () => {
             e.currentTarget.style.transform = "translateY(0)";
           }}
         >
-          Add to Agreed Spans
+          Accept
         </button>
       )}
     </div>
