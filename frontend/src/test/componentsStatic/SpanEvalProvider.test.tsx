@@ -51,12 +51,14 @@ describe('SpanEvalProvider', () => {
 
   beforeEach(() => {
     originalLocalStorage = (globalThis as any).localStorage;
-    const storage = {
-      getItem: vi.fn().mockReturnValue(null),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
+    const storage: Storage = {
+      length: 0,
       clear: vi.fn(),
-    } as Storage;
+      getItem: vi.fn().mockReturnValue(null),
+      key: vi.fn().mockReturnValue(null),
+      removeItem: vi.fn(),
+      setItem: vi.fn(),
+    };
 
     Object.defineProperty(globalThis, 'localStorage', {
       value: storage,
